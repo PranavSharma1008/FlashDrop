@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FlashDrop - P2P File Sharing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <div class="container">
+      <header class="header">
+        <div class="header-content">
+          <h1>✨ FlashDrop</h1>
+          <p class="subtitle">Fast, secure, local peer-to-peer file sharing over your network</p>
+        </div>
+      </header>
+
+      <div class="grid">
+        <!-- Connect to Peer Card -->
+        <section class="card connect-card" id="connectSection">
+          <div class="card-header">
+            <h3>🔗 Connect to Peer</h3>
+            <span class="status-badge connection-status">Disconnected</span>
+          </div>
+          <p class="card-subtitle">Share your IP with peers to receive their files securely</p>
+          <p>Your Host URL:</p>
+          <div class="url-box">
+            <code id="localUrl">http://{{ local_ip }}:{{ app_port }}</code>
+            <button class="copy-btn" id="copyUrlBtn" title="Copy URL">📋</button>
+          </div>
+          <div class="connect-form">
+            <div class="input-group full-width">
+              <label for="peerIp">Receiver IP Address</label>
+              <input id="peerIp" placeholder="e.g., 192.168.1.8" class="ip-input" />
+            </div>
+            <div class="input-row fixed-ports">
+              <div class="port-box">
+                <span>App Port</span>
+                <strong>5000</strong>
+              </div>
+              <div class="port-box">
+                <span>TCP Port</span>
+                <strong>{{ tcp_port }}</strong>
+              </div>
+            </div>
+            <button id="connectPeer" class="btn btn-primary" style="margin-top: 10px;">
+              <span class="btn-text">Connect to Peer</span>
+              <span class="btn-spinner"></span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Upload & Send Card -->
+        <section class="card upload-card" id="uploadSection">
+          <div class="card-header">
+            <h3>📤 Upload & Send</h3>
+            <span class="file-count-badge" id="fileCountBadge">0</span>
+          </div>
+          <p class="card-subtitle">Select files and send them to connected peers</p>
+          <input id="fileInput" type="file" multiple />
+          <div id="dropzone" class="dropzone">
+            <div class="dropzone-icon">📁</div>
+            <p>Drag and drop files here or click to browse</p>
+          </div>
+          <div class="file-list">
+            <h4>📦 Outbox Files</h4>
+            <ul id="outboxList" class="file-items"></ul>
+            <button id="sendFiles" class="btn btn-success" style="margin-top: 12px;">
+              <span class="btn-text">Send Selected Files</span>
+              <span class="btn-spinner"></span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Transfer Status Card -->
+        <section class="card status-card" id="statusSection">
+          <div class="card-header">
+            <h3>📊 Transfer Status</h3>
+            <span class="status-indicator idle"></span>
+          </div>
+          <p class="card-subtitle">Real-time transfer progress and statistics</p>
+          <div class="progress-container">
+            <div class="progress"><div id="bar" class="bar"></div></div>
+            <span id="progressPercent" class="progress-text">0%</span>
+          </div>
+          <p id="stats" class="stats-text">Status: <span class="status-value">idle</span></p>
+          <p id="status" class="status-text">Ready to transfer</p>
+          <div id="transferDetails" class="transfer-details" style="display: none;">
+            <p>📊 <strong>File Size:</strong> <span id="totalFileSize">0 B</span></p>
+            <p>⏱️ <strong>Time Taken:</strong> <span id="timeTaken">--</span></p>
+            <p>🎯 <strong>Completed:</strong> <span id="filesCompleted">0</span> file(s)</p>
+          </div>
+        </section>
+
+        <!-- Receiver Inbox Card (Full Width) -->
+        <section class="card inbox-card inbox-full" id="inboxSection">
+          <div class="card-header">
+            <h3>📥 Receiver Inbox</h3>
+            <span class="inbox-count-badge" id="inboxCountBadge">0</span>
+          </div>
+          <p class="card-subtitle">Files received from connected peers</p>
+          <div class="file-list">
+            <ul id="inboxList" class="file-items"></ul>
+            <p id="emptyInboxMessage" class="empty-message">No files received yet</p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <p>Made with ❤️ by <strong>Pranav Sharma</strong></p>
+        <div class="social-links">
+          <a href="https://github.com/PranavSharma1008" target="_blank" rel="noopener noreferrer" title="GitHub" class="social-link">
+            <span>🔗</span> GitHub
+          </a>
+          <a href="https://www.linkedin.com/in/pranav-sharma-205a7a396/" target="_blank" rel="noopener noreferrer" title="LinkedIn" class="social-link">
+            <span>💼</span> LinkedIn
+          </a>
+          <a href="mailto:pranav2410991479@gmail.com" title="Email" class="social-link">
+            <span>📧</span> Email
+          </a>
+        </div>
+        <p class="footer-note">FlashDrop © 2026 - Fast P2P File Sharing</p>
+      </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='app.js') }}?v=3" defer></script>
+  </body>
+</html>

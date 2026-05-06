@@ -131,6 +131,9 @@ function showTransferProgress() {
   if (progressBar) progressBar.classList.remove("hidden");
   const progressText = byId("progressPercent");
   if (progressText) progressText.classList.remove("hidden");
+  // Hide movable circle when showing progress
+  const movableCircle = byId("movableCircle");
+  if (movableCircle) movableCircle.classList.add("hidden");
 }
 
 function hideTransferProgress() {
@@ -138,6 +141,16 @@ function hideTransferProgress() {
   if (progressBar) progressBar.classList.add("hidden");
   const progressText = byId("progressPercent");
   if (progressText) progressText.classList.add("hidden");
+}
+
+function showMovableCircle() {
+  const movableCircle = byId("movableCircle");
+  if (movableCircle) movableCircle.classList.remove("hidden");
+}
+
+function hideMovableCircle() {
+  const movableCircle = byId("movableCircle");
+  if (movableCircle) movableCircle.classList.add("hidden");
 }
 
 function setTransferProgressText(text) {
@@ -586,6 +599,13 @@ async function uploadSelected(files) {
     Toast.error("Wait for the current receive operation to finish.");
     return;
   }
+  
+  // Start circle animation for upload
+  const statusIndicator = document.querySelector(".status-indicator");
+  if (statusIndicator) {
+    statusIndicator.classList.remove("idle");
+    statusIndicator.classList.add("active");
+  }
 
   const fileArray = Array.from(files);
   const pendingItems = fileArray.map((file, index) => ({
@@ -612,6 +632,7 @@ async function uploadSelected(files) {
   byId("cancelTransfer").disabled = false;
   showTransferSpinner();
   showTransferProgress();
+  hideMovableCircle(); // Hide movable circle when starting new upload
 
   setStatus(`Uploading ${fileArray.length} file(s)...`);
   Toast.info(`📁 Uploading ${fileArray.length} file(s) to outbox...`);
@@ -644,12 +665,30 @@ async function uploadSelected(files) {
   state.currentOperation = null;
   state.uploadXhr = null;
   hideTransferSpinner();
-  const totalTime = Math.round((Date.now() - state.transferStartTime) / 1000);
-  const minutes = Math.floor(totalTime / 60);
-  const seconds = totalTime % 60;
-  const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-  byId("timeTaken").textContent = timeString;
-  setTransferProgressText(`Uploaded ${fileArray.length} file(s) in ${timeString}`);
+  hideTransferProgress(); // Hide progress bar
+  
+  // Only show completion message if files were actually uploaded
+  if (fileArray.length > 0) {
+    showMovableCircle(); // Show movable circle instead
+    const totalTime = Math.round((Date.now() - state.transferStartTime) / 1000);
+    const minutes = Math.floor(totalTime / 60);
+    const seconds = totalTime % 60;
+    const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    
+    // Only show time if it's greater than 0
+    if (totalTime > 0) {
+      byId("timeTaken").textContent = timeString;
+      setTransferProgressText(`Upload complete - ${fileArray.length} file(s) uploaded in ${timeString}`);
+    } else {
+      byId("timeTaken").textContent = "--";
+      setTransferProgressText(`Upload complete - ${fileArray.length} file(s) uploaded`);
+    }
+  } else {
+    hideMovableCircle(); // Hide movable circle if no files
+    byId("timeTaken").textContent = "--";
+    setTransferProgressText("Ready to transfer");
+  }
+  
   byId("cancelTransfer").disabled = true;
   setStatus("All files uploaded to outbox.");
   byId("fileInput").value = "";
@@ -824,6 +863,13 @@ async function sendFiles() {
   const sendBtn = byId("sendFiles");
   setButtonLoading(sendBtn, true);
   Toast.info(`📤 Sending ${file_ids.length} file(s)...`);
+  
+  // Start circle animation for send
+  const statusIndicator = document.querySelector(".status-indicator");
+  if (statusIndicator) {
+    statusIndicator.classList.remove("idle");
+    statusIndicator.classList.add("active");
+  }
 
   try {
     const data = await fetchJSON("/api/send", {
@@ -984,6 +1030,7 @@ async function monitorTransfer() {
         } else if (t.status === "cancelled") {
           hideTransferSpinner();
           hideTransferProgress();
+          hideMovableCircle(); // Hide movable circle when cancelled
           state.currentOperation = null;
           state.cancelRequested = false;
           // Stop cursor animation
@@ -1007,7 +1054,8 @@ async function monitorTransfer() {
           byId("timeTaken").textContent = timeString;
           byId("totalFileSize").textContent = fmtBytes(state.transferTotalSize);
           hideTransferSpinner();
-          hideTransferProgress();
+          hideTransferProgress(); // Hide progress bar
+          showMovableCircle(); // Show movable circle instead
           state.currentOperation = null;
           state.cancelRequested = false;
           
@@ -1228,7 +1276,12 @@ async function bootstrap() {
 
   if (data.all_ips && data.all_ips.length > 1) {
     data.all_ips.forEach((ip) => {
-      if (ip !== data.ip && !ip.startsWith('127.') && !ip.startsWith('::') && !ip.startsWith('fe80:')) {
+      if (ip !== data.ip && 
+          ip !== window.location.hostname && 
+          !ip.startsWith('127.') && 
+          !ip.startsWith('::') && 
+          !ip.startsWith('fe80:') &&
+          ip !== '0.0.0.0') {
         const urlItem = document.createElement("div");
         urlItem.className = "url-item";
         urlItem.innerHTML = `
@@ -1320,10 +1373,22 @@ window.addEventListener("DOMContentLoaded", () => {
       
       const allIpsBox = byId("allIpsBox");
       if (allIpsBox.style.display === "none" || !allIpsBox.style.display) {
-        if (allIps.length === 0) {
+        // Get current IP to exclude it from the list
+        const currentIp = window.location.hostname;
+        
+        // Filter out current IP and invalid IPs
+        const filteredIps = allIps.filter(ip => 
+          ip !== currentIp && 
+          !ip.startsWith('127.') && 
+          !ip.startsWith('::') && 
+          !ip.startsWith('fe80:') &&
+          ip !== '0.0.0.0'
+        );
+        
+        if (filteredIps.length === 0) {
           allIpsBox.innerHTML = "<p style='color: #64748b;'>No additional IPs found</p>";
         } else {
-          allIpsBox.innerHTML = allIps
+          allIpsBox.innerHTML = filteredIps
             .map(
               (ip) =>
                 `<div style="margin-bottom:4px;"><code>http://${ip}:${appPort}</code> <button class='copy-btn' onclick='copyToClipboard("http://${ip}:${appPort}")'>📋</button></div>`

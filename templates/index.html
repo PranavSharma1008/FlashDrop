@@ -12,41 +12,48 @@
 
     <div class="container">
       <header class="header">
-        <div class="header-content">
-          <h1>✨ FlashDrop</h1>
-          <p class="subtitle">Fast, secure, local peer-to-peer file sharing over your network</p>
+        <div class="header-top">
+          <div class="header-content">
+            <h1>✨ <span style="color: #22c55e; font-weight: 900;">F</span><span style="color: #111827; font-weight: 900;">lash</span><span style="color: #22c55e; font-weight: 900;">D</span><span style="color: #111827; font-weight: 900;">rop</span></h1>
+            <p class="subtitle">Fast, secure, local peer-to-peer file sharing over your network</p>
+          </div>
+          <div class="theme-toggle">
+            <button id="themeToggle" class="btn btn-secondary">
+              <span class="theme-icon">🌙</span>
+              <span class="theme-text">Night Shift</span>
+            </button>
+          </div>
+          <!-- Removed GitHub and LinkedIn buttons as requested -->
         </div>
       </header>
 
       <div class="grid">
         <!-- Connect to Peer Card -->
         <section class="card connect-card" id="connectSection">
-          <div class="card-header">
+          <div class="card-header connect-header-row">
             <h3>🔗 Connect to Peer</h3>
-            <span class="status-badge connection-status">Disconnected</span>
+            <span class="status-badge connection-status status-disconnected">Disconnected</span>
           </div>
           <p class="card-subtitle">Share your IP with peers to receive their files securely</p>
-          <p>Your Host URL:</p>
+          <p>Your Host URLs:</p>
           <div class="url-box">
             <code id="localUrl">http://{{ local_ip }}:{{ app_port }}</code>
             <button class="copy-btn" id="copyUrlBtn" title="Copy URL">📋</button>
           </div>
+          <div id="allUrls" class="url-list" style="display: none;">
+            <p>Alternative URLs (if the above doesn't work):</p>
+            <div id="urlList">
+              <!-- Will be populated by JavaScript -->
+            </div>
+          </div>
+          <button id="showAllIps" class="btn btn-secondary" style="margin-bottom: 10px;">Show All IPs</button>
+          <div id="allIpsBox" style="display:none; margin-bottom: 10px;"></div>
           <div class="connect-form">
             <div class="input-group full-width">
               <label for="peerIp">Receiver IP Address</label>
-              <input id="peerIp" placeholder="e.g., 192.168.1.8" class="ip-input" />
+              <input id="peerIp" placeholder="e.g., 192.168.1.8" class="ip-input big-input" />
             </div>
-            <div class="input-row fixed-ports">
-              <div class="port-box">
-                <span>App Port</span>
-                <strong>5000</strong>
-              </div>
-              <div class="port-box">
-                <span>TCP Port</span>
-                <strong>{{ tcp_port }}</strong>
-              </div>
-            </div>
-            <button id="connectPeer" class="btn btn-primary" style="margin-top: 10px;">
+            <button id="connectPeer" type="button" class="btn btn-success connect-button">
               <span class="btn-text">Connect to Peer</span>
               <span class="btn-spinner"></span>
             </button>
@@ -60,15 +67,24 @@
             <span class="file-count-badge" id="fileCountBadge">0</span>
           </div>
           <p class="card-subtitle">Select files and send them to connected peers</p>
-          <input id="fileInput" type="file" multiple />
+          <input type="file" id="fileInput" multiple style="display: none;" />
           <div id="dropzone" class="dropzone">
-            <div class="dropzone-icon">📁</div>
-            <p>Drag and drop files here or click to browse</p>
+            <div class="dropzone-icon big-folder">📁</div>
+            <p class="dropzone-text">Drag and drop files here or click to browse</p>
+          </div>
+          <div class="upload-controls-row">
+            <button id="selectAllOutbox" class="btn btn-secondary">Select All</button>
+            <button id="deleteSelectedOutbox" class="btn btn-secondary">Delete Selected</button>
+            <button id="deleteAllOutbox" class="btn btn-danger-outline">Delete All</button>
           </div>
           <div class="file-list">
-            <h4>📦 Outbox Files</h4>
-            <ul id="outboxList" class="file-items"></ul>
-            <button id="sendFiles" class="btn btn-success" style="margin-top: 12px;">
+            <div class="file-list-header">
+              <h4>📦 Outbox Files</h4>
+            </div>
+            <div class="scrollable-list">
+              <ul id="outboxList" class="file-items"></ul>
+            </div>
+            <button id="sendFiles" type="button" class="btn btn-success" style="margin-top: 12px;">
               <span class="btn-text">Send Selected Files</span>
               <span class="btn-spinner"></span>
             </button>
@@ -82,16 +98,25 @@
             <span class="status-indicator idle"></span>
           </div>
           <p class="card-subtitle">Real-time transfer progress and statistics</p>
+          <div class="transfer-meta">
+            <span id="transferBadge" class="status-badge status-idle">Idle</span>
+            <span id="transferEta" class="eta-text">ETA: --</span>
+            <button id="cancelTransfer" class="btn btn-success transfer-cancel" disabled>Cancel</button>
+          </div>
           <div class="progress-container">
-            <div class="progress"><div id="bar" class="bar"></div></div>
-            <span id="progressPercent" class="progress-text">0%</span>
+            <div id="transferSpinner" class="spinner hidden" aria-hidden="true"></div>
+            <div id="transferProgressText" class="transfer-progress-text">Ready to transfer</div>
+            <div class="progress hidden"><div id="bar" class="bar"></div></div>
+            <span id="progressPercent" class="progress-text hidden">0%</span>
           </div>
           <p id="stats" class="stats-text">Status: <span class="status-value">idle</span></p>
           <p id="status" class="status-text">Ready to transfer</p>
           <div id="transferDetails" class="transfer-details" style="display: none;">
-            <p>📊 <strong>File Size:</strong> <span id="totalFileSize">0 B</span></p>
+            <p>📄 <strong>Current File:</strong> <span id="currentFileName">--</span></p>
+            <p>💾 <strong>Current Size:</strong> <span id="currentFileSize">--</span></p>
+            <p>📊 <strong>Total Size:</strong> <span id="totalFileSize">0 B</span></p>
             <p>⏱️ <strong>Time Taken:</strong> <span id="timeTaken">--</span></p>
-            <p>🎯 <strong>Completed:</strong> <span id="filesCompleted">0</span> file(s)</p>
+            <p>🎯 <strong>Files:</strong> <span id="filesCompleted">0</span></p>
           </div>
         </section>
 
@@ -103,7 +128,18 @@
           </div>
           <p class="card-subtitle">Files received from connected peers</p>
           <div class="file-list">
-            <ul id="inboxList" class="file-items"></ul>
+            <div class="file-list-header">
+              <h4>Inbox Files</h4>
+              <div class="list-actions">
+                <button id="selectAllInbox" class="btn btn-secondary">Select All</button>
+                <button id="downloadSelectedInbox" class="btn btn-secondary">Download Selected</button>
+                <button id="deleteSelectedInbox" class="btn btn-secondary">Delete Selected</button>
+                <button id="deleteAllInbox" class="btn btn-danger-outline">Delete All</button>
+              </div>
+            </div>
+            <div class="scrollable-list">
+              <ul id="inboxList" class="file-items"></ul>
+            </div>
             <p id="emptyInboxMessage" class="empty-message">No files received yet</p>
           </div>
         </section>
@@ -112,20 +148,16 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <div class="footer-content">
-        <p>Made with ❤️ by <strong>Pranav Sharma</strong></p>
-        <div class="social-links">
-          <a href="https://github.com/PranavSharma1008" target="_blank" rel="noopener noreferrer" title="GitHub" class="social-link">
-            <span>🔗</span> GitHub
+      <div class="footer-content centered-footer">
+        <div class="footer-socials">
+          <a href="https://github.com/PranavSharma1008" target="_blank" rel="noreferrer" title="GitHub" class="footer-icon-link">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" class="footer-icon" />
           </a>
-          <a href="https://www.linkedin.com/in/pranav-sharma-205a7a396/" target="_blank" rel="noopener noreferrer" title="LinkedIn" class="social-link">
-            <span>💼</span> LinkedIn
-          </a>
-          <a href="mailto:pranav2410991479@gmail.com" title="Email" class="social-link">
-            <span>📧</span> Email
+          <a href="https://www.linkedin.com/in/pranav-sharma-28bb54368/" target="_blank" rel="noreferrer" title="LinkedIn" class="footer-icon-link">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg" alt="LinkedIn" class="footer-icon" />
           </a>
         </div>
-        <p class="footer-note">FlashDrop © 2026 - Fast P2P File Sharing</p>
+        <p class="footer-title">FlashDrop © 2026 - Fast P2P File Sharing</p>
       </div>
     </footer>
 

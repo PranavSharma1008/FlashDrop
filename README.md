@@ -45,8 +45,32 @@ Open the app on another device via:
 4. Select outbox files and click **Send Selected**.
 5. On receiver: download files from **Receiver Inbox** list.
 
+## Download Optimization
+
+The app uses streaming downloads to minimize memory usage and prevent excessive system data growth during file downloads through browsers like Chrome. Files are streamed in 64KB chunks with appropriate cache-control headers to ensure efficient transfer.
+
+## Troubleshooting Connection Issues
+
+If you can't connect to a peer after entering the correct IP:
+
+1. **Check Network**: Both devices must be on the same WiFi network or accessible network.
+
+2. **Firewall**: Ensure ports 5000 (HTTP) and 9009 (TCP) are not blocked by firewall.
+
+3. **IP Address**: 
+   - Use the IP shown in the "Your Host URL" box
+   - If that doesn't work, click "Show All IPs" to see alternative addresses
+   - Try different IPs from the list (avoid 127.0.0.1 for cross-device connections)
+
+4. **App Running**: Make sure the app is running on both devices.
+
+5. **PIN Settings**: If the receiver has PIN enabled, transfers will fail (but connection should still work).
+
+6. **Error Messages**: The app now shows detailed error messages if connection fails.
+
 ## Notes
 
 - For iOS camera QR scanning, allow camera permission in browser.
 - For best speed, keep both devices on same fast WiFi/hotspot.
 - This is a prototype; you can later add TLS and stronger auth.
+# FlashDrop

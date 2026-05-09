@@ -104,8 +104,9 @@ function normalizePercent(value) {
   return Math.min(Math.max(pct, 0), 100);
 }
 
+// Remove direct status text update, use toast instead
 function setStatus(text) {
-  byId("status").textContent = text;
+  Toast.info(text, 2000);
 }
 
 function setButtonLoading(btn, isLoading) {
@@ -118,29 +119,38 @@ function setButtonLoading(btn, isLoading) {
   }
 }
 
-function showTransferSpinner() {
-  byId("transferSpinner")?.classList.remove("hidden");
-}
+// Remove spinner logic
+function showTransferSpinner() {}
+function hideTransferSpinner() {}
 
-function hideTransferSpinner() {
-  byId("transferSpinner")?.classList.add("hidden");
-}
-
+// Show only the red moving bar/circle for progress
 function showTransferProgress() {
-  const progressBar = byId("bar")?.parentElement;
-  if (progressBar) progressBar.classList.remove("hidden");
-  const progressText = byId("progressPercent");
-  if (progressText) progressText.classList.remove("hidden");
-  // Hide movable circle when showing progress
   const movableCircle = byId("movableCircle");
-  if (movableCircle) movableCircle.classList.add("hidden");
+  if (movableCircle) {
+    movableCircle.classList.remove("hidden");
+    movableCircle.style.background = "linear-gradient(45deg, #ff4444, #ff6666)";
+    movableCircle.style.animationPlayState = "running";
+  }
 }
 
 function hideTransferProgress() {
-  const progressBar = byId("bar")?.parentElement;
-  if (progressBar) progressBar.classList.add("hidden");
-  const progressText = byId("progressPercent");
-  if (progressText) progressText.classList.add("hidden");
+  const movableCircle = byId("movableCircle");
+  if (movableCircle) {
+    movableCircle.classList.add("hidden");
+    movableCircle.style.animationPlayState = "paused";
+  }
+}
+
+function updateMovableCircleColor(progress) {
+  const movableCircle = byId("movableCircle");
+  if (!movableCircle) return;
+  // Always red for upload, stop animation if 100% or canceled
+  const pct = normalizePercent(progress);
+  if (pct >= 100 || state.cancelRequested) {
+    movableCircle.style.animationPlayState = "paused";
+  } else {
+    movableCircle.style.animationPlayState = "running";
+  }
 }
 
 function showMovableCircle() {
@@ -180,6 +190,18 @@ function updateConnectionStatus(isConnected, peerIp = null) {
     badge.textContent = "Disconnected";
     document.querySelector(".status-indicator").classList.remove("active");
     document.querySelector(".status-indicator").classList.add("idle");
+  }
+}
+
+// Function to update running status to light red
+function updateRunningStatus(isRunning) {
+  const badge = byId("transferBadge");
+  if (isRunning) {
+    badge.style.backgroundColor = "#ffcccc"; // Light red color
+    badge.style.color = "#cc0000"; // Darker red text
+  } else {
+    badge.style.backgroundColor = ""; // Reset to default
+    badge.style.color = ""; // Reset to default
   }
 }
 
@@ -452,49 +474,75 @@ function toggleSelectAllOutbox() {
 }
 
 async function cancelCurrentTransfer() {
-  if (state.currentOperation === "upload" && state.uploadXhr) {
+  // Clear all state regardless of operation type
+  const wasReceiving = state.currentOperation === "receive";
+  const wasSending = state.currentOperation === "send";
+  const wasUploading = state.currentOperation === "upload";
+  
+  if (wasUploading && state.uploadXhr) {
     const confirmation = confirm("Cancel the current upload?");
     if (!confirmation) return;
     state.cancelRequested = true;
     state.uploadXhr.abort();
     clearUploadingPlaceholders();
-    state.currentOperation = null;
-    state.uploadXhr = null;
-    state.cancelRequested = false;
-    hideTransferSpinner();
-    hideTransferProgress();
-    setTransferProgressText("Upload cancelled");
-    byId("cancelTransfer").disabled = true;
-    Toast.info("⚠️ Upload cancelled");
-    setStatus("Upload cancelled by user.");
-    return;
+  } else if (state.transferId || wasReceiving) {
+    const confirmation = confirm("Cancel the current transfer?");
+    if (!confirmation) return;
   }
 
-  if (!state.transferId) {
-    Toast.error("No active transfer to cancel.");
-    return;
-  }
-
-  const confirmation = confirm("Cancel the current transfer?");
-  if (!confirmation) return;
-
+  // Completely clear all state and stop all processes
   state.cancelRequested = true;
-  setTransferProgressText("Cancelling transfer...");
-  byId("stats").innerHTML = `Status: <span class="status-value">Cancelling</span>`;
-  byId("cancelTransfer").disabled = true;
-  try {
-    const data = await fetchJSON(`/api/transfers/${state.transferId}/cancel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    hideTransferSpinner();
-    Toast.info("⚠️ Transfer cancellation requested");
-    setStatus(`Cancel requested for transfer ${data.transfer_id}`);
-  } catch (err) {
-    state.cancelRequested = false;
-    Toast.error(`Cancel failed: ${err.message}`);
-    setStatus(`Cancel failed: ${err.message}`);
+  state.currentOperation = null;
+  state.uploadXhr = null;
+  state.transferId = null;
+  state.cancelRequested = false;
+  
+  // Clear all intervals
+  if (state.monitorInterval) {
+    clearInterval(state.monitorInterval);
+    state.monitorInterval = null;
   }
+  if (state.receiveMonitorInterval) {
+    clearInterval(state.receiveMonitorInterval);
+    state.receiveMonitorInterval = null;
+  }
+  
+  // Hide all UI elements
+  hideTransferSpinner();
+  hideTransferProgress();
+  hideMovableCircle();
+  updateRunningStatus(false);
+  
+  // Reset UI to idle state
+  byId("cancelTransfer").disabled = true;
+  byId("transferBadge").textContent = "Idle";
+  byId("transferBadge").className = "status-badge status-idle";
+  byId("transferEta").textContent = "ETA: --";
+  byId("stats").innerHTML = `Status: <span class="status-value">idle</span>`;
+  setTransferProgressText("Operation cancelled");
+  
+  // Stop cursor animation
+  const statusIndicator = document.querySelector(".status-indicator");
+  if (statusIndicator) {
+    statusIndicator.classList.remove("active");
+    statusIndicator.classList.add("idle");
+  }
+  
+  // Show single appropriate message
+  if (wasUploading) {
+    Toast.info("⚠️ Upload cancelled");
+  } else if (wasSending) {
+    Toast.info("⚠️ Send cancelled");
+  } else if (wasReceiving) {
+    Toast.info("⚠️ Receive cancelled");
+  } else {
+    Toast.info("⚠️ Operation cancelled");
+  }
+  
+  // Restart receiving monitor to handle new transfers
+  setTimeout(() => {
+    monitorReceivingFiles();
+  }, 1000);
 }
 
 async function deleteSelectedInbox() {
@@ -590,13 +638,11 @@ async function uploadSelected(files) {
   if (!files.length) return;
 
   if (state.currentOperation === "send") {
-    alert("A send is already in progress. Stop it before uploading new files.");
-    Toast.error("Stop the current send before uploading.");
+    Toast.error("⚠️ A send is already in progress. Please stop it before uploading new files.");
     return;
   }
   if (state.currentOperation === "receive") {
-    alert("A receive operation is active. Please wait until it finishes before uploading.");
-    Toast.error("Wait for the current receive operation to finish.");
+    Toast.error("⚠️ A receive operation is active. Please wait until it finishes before uploading.");
     return;
   }
   
@@ -629,10 +675,10 @@ async function uploadSelected(files) {
   setCurrentFileDetails("--", "--");
   byId("transferBadge").textContent = "Uploading";
   byId("transferBadge").className = "status-badge status-sending";
+  updateRunningStatus(true); // Set light red color for running status
   byId("cancelTransfer").disabled = false;
   showTransferSpinner();
-  showTransferProgress();
-  hideMovableCircle(); // Hide movable circle when starting new upload
+  showTransferProgress(); // This now shows movable circle instead of bar
 
   setStatus(`Uploading ${fileArray.length} file(s)...`);
   Toast.info(`📁 Uploading ${fileArray.length} file(s) to outbox...`);
@@ -656,8 +702,12 @@ async function uploadSelected(files) {
       hideTransferSpinner();
       setTransferProgressText(`Upload cancelled`);
       byId("cancelTransfer").disabled = true;
-      Toast.error(`Upload failed: ${err.message}`);
-      setStatus(`Upload failed: ${err.message}`);
+      // Don't show error message for cancelled uploads to avoid duplicates
+      if (!err.message.includes('cancelled')) {
+        Toast.error(`Upload failed: ${err.message}`);
+      }
+      // Don't set redundant status message
+      // setStatus(`Upload failed: ${err.message}`);
       return;
     }
   }
@@ -666,10 +716,11 @@ async function uploadSelected(files) {
   state.uploadXhr = null;
   hideTransferSpinner();
   hideTransferProgress(); // Hide progress bar
+  showMovableCircle(); // Show movable circle instead
+  updateRunningStatus(false); // Reset light red color
   
   // Only show completion message if files were actually uploaded
   if (fileArray.length > 0) {
-    showMovableCircle(); // Show movable circle instead
     const totalTime = Math.round((Date.now() - state.transferStartTime) / 1000);
     const minutes = Math.floor(totalTime / 60);
     const seconds = totalTime % 60;
@@ -678,20 +729,12 @@ async function uploadSelected(files) {
     // Only show time if it's greater than 0
     if (totalTime > 0) {
       byId("timeTaken").textContent = timeString;
-      setTransferProgressText(`Upload complete - ${fileArray.length} file(s) uploaded in ${timeString}`);
-    } else {
-      byId("timeTaken").textContent = "--";
       setTransferProgressText(`Upload complete - ${fileArray.length} file(s) uploaded`);
+      byId("cancelTransfer").disabled = true;
+      setStatus("All files uploaded to outbox.");
+      byId("fileInput").value = "";
     }
-  } else {
-    hideMovableCircle(); // Hide movable circle if no files
-    byId("timeTaken").textContent = "--";
-    setTransferProgressText("Ready to transfer");
   }
-  
-  byId("cancelTransfer").disabled = true;
-  setStatus("All files uploaded to outbox.");
-  byId("fileInput").value = "";
 }
 
 async function uploadSingleFile(file, placeholderId, fileIndex, totalFiles) {
@@ -727,17 +770,20 @@ async function uploadSingleFile(file, placeholderId, fileIndex, totalFiles) {
       const elapsedText = `${Math.floor(elapsed)}s`;
       const speedText = `${(speed / (1024 * 1024)).toFixed(2)} MB/s`;
 
-      byId("bar").style.width = `${pct.toFixed(1)}%`;
-      byId("progressPercent").textContent = `${pct.toFixed(1)}%`;
-      setProgressBubblePosition(pct);
+      // Update movable circle color instead of bar
+      updateMovableCircleColor(pct);
+      // Remove bar and percentage updates
+      // byId("bar").style.width = `${pct.toFixed(1)}%`;
+      // byId("progressPercent").textContent = `${pct.toFixed(1)}%`;
+      // setProgressBubblePosition(pct);
       byId("stats").innerHTML =
         `Status: <span class="status-value">Uploading</span> | ${fmtBytes(uploadedSize)} of ${fmtBytes(totalSize)} | ${speedText} | ${elapsedText}`;
-      byId("transferEta").textContent =
-        `ETA: ${timeRemaining !== null ? `${timeRemaining}s` : "--"}`;
+      byId("transferEta").textContent = "--";
       setCurrentFileDetails(`${file.name} (${fileIndex}/${totalFiles})`, fmtBytes(totalSize));
-      showTransferProgress();
+      showTransferProgress(); // This now updates movable circle
       setTransferProgressText(`Uploading ${file.name} — ${fmtBytes(totalSize)}`);
-      setStatus(`Uploading ${file.name} (${fileIndex}/${totalFiles})`);
+      // Don't set status for each file to avoid multiple messages
+      // setStatus(`Uploading ${file.name} (${fileIndex}/${totalFiles})`);
     });
 
     xhr.addEventListener("load", async () => {
@@ -785,7 +831,7 @@ async function uploadSingleFile(file, placeholderId, fileIndex, totalFiles) {
       const speed = Math.min(uploadedSize / elapsed, totalSize);
       const remainingBytes = Math.max(totalSize - uploadedSize, 0);
       const timeRemaining = speed > 0 ? Math.ceil(remainingBytes / speed) : null;
-      byId("transferEta").textContent = `ETA: ${timeRemaining !== null ? `${timeRemaining}s` : "--"}`;
+      byId("transferEta").textContent = "--";
     }, 1000);
   });
 }
@@ -796,9 +842,12 @@ function clearUploadingPlaceholders() {
 }
 
 async function connectPeer() {
+  console.log("connectPeer function called");
   const peerIp = byId("peerIp").value.trim();
+  console.log("Peer IP entered:", peerIp);
 
   if (!peerIp) {
+    console.log("No peer IP provided");
     Toast.error("Please enter receiver IP");
     setStatus("Enter receiver IP first.");
     return;
@@ -822,7 +871,6 @@ async function connectPeer() {
     state.tcpPort = state.localTcpPort;
 
     Toast.success(`✅ Connected Successfully to Peer (${state.peerIp})`);
-    setStatus(`Connected to peer ${state.peerIp}`);
     updateConnectionStatus(true, state.peerIp);
   } catch (err) {
     Toast.error(`Connection failed: ${err.message}`);
@@ -894,7 +942,8 @@ async function sendFiles() {
     );
     setTransferProgressText(`Sending ${file_ids.length} file(s) — ${fmtBytes(state.transferTotalSize)}`);
     showTransferSpinner();
-    showTransferProgress();
+    showTransferProgress(); // This now shows movable circle instead of bar
+    updateRunningStatus(true); // Set light red color for running status
 
     Toast.info("📤 Transfer started");
     setStatus(
@@ -970,9 +1019,12 @@ async function monitorTransfer() {
       const elapsedText = elapsed > 59 ? `${Math.floor(elapsed / 60)}m ${elapsed % 60}s` : `${elapsed}s`;
       const speedText = t.speed_mbps ? `${t.speed_mbps.toFixed(2)} MB/s` : "--";
 
-      byId("bar").style.width = `${pct}%`;
-      byId("progressPercent").textContent = `${pct}%`;
-      setProgressBubblePosition(pctNum);
+      // Update movable circle color instead of bar
+      updateMovableCircleColor(pct);
+      // Remove bar and percentage updates
+      // byId("bar").style.width = `${pct}%`;
+      // byId("progressPercent").textContent = `${pct}%`;
+      // setProgressBubblePosition(pctNum);
 
       const currentStatus =
         t.status === "running" &&
@@ -990,12 +1042,7 @@ async function monitorTransfer() {
       setCurrentFileDetails(fileName, fileSize);
       setTransferProgressText(`Sending ${fileName} — ${transferredText}`);
 
-      const etaText =
-        t.status === "completed"
-          ? "0.0s"
-          : t.eta_seconds
-            ? `${t.eta_seconds.toFixed(1)}s`
-            : "--";
+      const etaText = "--";
       byId("transferEta").textContent = `ETA: ${etaText}`;
 
       byId("transferBadge").textContent = currentStatus.replace(
@@ -1024,6 +1071,7 @@ async function monitorTransfer() {
           hideTransferProgress();
           state.currentOperation = null;
           state.cancelRequested = false;
+          updateRunningStatus(false); // Reset light red color
           Toast.error(`❌ Transfer failed: ${t.error}`);
           setStatus(`Transfer failed: ${t.error}`);
           byId("transferEta").textContent = "ETA: --";
@@ -1033,6 +1081,7 @@ async function monitorTransfer() {
           hideMovableCircle(); // Hide movable circle when cancelled
           state.currentOperation = null;
           state.cancelRequested = false;
+          updateRunningStatus(false); // Reset light red color
           // Stop cursor animation
           const statusIndicator = document.querySelector(".status-indicator");
           if (statusIndicator) {
@@ -1058,6 +1107,7 @@ async function monitorTransfer() {
           showMovableCircle(); // Show movable circle instead
           state.currentOperation = null;
           state.cancelRequested = false;
+          updateRunningStatus(false); // Reset light red color
           
           // Stop cursor animation
           const statusIndicator = document.querySelector(".status-indicator");
@@ -1104,6 +1154,8 @@ function monitorReceivingFiles() {
         if (state.currentOperation === "receive") {
           hideTransferSpinner();
           hideTransferProgress();
+          hideMovableCircle(); // Hide movable circle when receive completes
+          updateRunningStatus(false); // Reset light red color
           state.currentOperation = null;
           state.transferId = null;
           byId("cancelTransfer").disabled = true;
@@ -1118,22 +1170,25 @@ function monitorReceivingFiles() {
             statusIndicator.classList.add("idle");
           }
           
-          setStatus("Receive complete.");
+          setStatus("✅ Receive complete - File ready for use");
         }
         return;
       }
 
       if (state.currentOperation !== "receive") {
         state.transferStartTime = Date.now();
+        // Only set status once when receiving starts
+        setStatus(`📥 Receiving ${file.file_name}`);
       }
       state.currentOperation = "receive";
       state.receiveTransfers = progress;
       byId("cancelTransfer").disabled = false;
       byId("transferBadge").textContent = "Receiving";
       byId("transferBadge").className = "status-badge status-sending";
+      updateRunningStatus(true); // Set light red color for running status
       byId("transferDetails").style.display = "block";
       showTransferSpinner();
-      showTransferProgress();
+      showTransferProgress(); // This now shows movable circle instead of bar
 
       const file = progress[0];
       state.transferId = file.transfer_id;
@@ -1148,17 +1203,21 @@ function monitorReceivingFiles() {
         : 0;
       const elapsedText = elapsed > 59 ? `${Math.floor(elapsed / 60)}m ${elapsed % 60}s` : `${elapsed}s`;
 
-      byId("bar").style.width = `${pct}%`;
-      byId("progressPercent").textContent = `${pct}%`;
-      setProgressBubblePosition(pct);
+      // Update movable circle color instead of bar
+      updateMovableCircleColor(pct);
+      // Remove bar and percentage updates
+      // byId("bar").style.width = `${pct}%`;
+      // byId("progressPercent").textContent = `${pct}%`;
+      // setProgressBubblePosition(pct);
       byId("stats").innerHTML =
         `Status: <span class="status-value">Receiving</span> | ${fmtBytes(file.bytes_received || 0)} of ${fmtBytes(file.bytes_total || 0)} | ${speed} MB/s | ${elapsedText}`;
       setTransferProgressText(`Receiving ${file.file_name} — ${fmtBytes(file.bytes_received || 0)} of ${fmtBytes(file.bytes_total || 0)}`);
-      byId("transferEta").textContent = `ETA: ${eta}`;
+      byId("transferEta").textContent = etaText;
       byId("totalFileSize").textContent = fmtBytes(file.bytes_total);
       byId("filesCompleted").textContent = 1;
       setCurrentFileDetails(file.file_name, fmtBytes(file.bytes_total));
-      setStatus(`Receiving ${file.file_name}`);
+      // Don't set status every second to avoid continuous messages
+      // setStatus(`Receiving ${file.file_name}`);
     } catch (err) {
       // ignore transient receive polling errors
     }
@@ -1166,16 +1225,27 @@ function monitorReceivingFiles() {
 }
 
 function configureDropzone() {
+  console.log("Configuring dropzone...");
   const zone = byId("dropzone");
   const fileInput = byId("fileInput");
+  
+  console.log("Dropzone element:", zone);
+  console.log("File input element:", fileInput);
+
+  if (!zone || !fileInput) {
+    console.error("Dropzone or file input elements not found!");
+    return;
+  }
 
   zone.addEventListener("click", (e) => {
+    console.log("Dropzone clicked");
     e.preventDefault();
     e.stopPropagation();
     fileInput.click();
   });
 
   zone.addEventListener("touchend", (e) => {
+    console.log("Dropzone touchend");
     e.preventDefault();
     e.stopPropagation();
     fileInput.click();
@@ -1274,23 +1344,15 @@ async function bootstrap() {
   const urlListDiv = byId("urlList");
   urlListDiv.innerHTML = "";
 
-  if (data.all_ips && data.all_ips.length > 1) {
-    data.all_ips.forEach((ip) => {
-      if (ip !== data.ip && 
-          ip !== window.location.hostname && 
-          !ip.startsWith('127.') && 
-          !ip.startsWith('::') && 
-          !ip.startsWith('fe80:') &&
-          ip !== '0.0.0.0') {
-        const urlItem = document.createElement("div");
-        urlItem.className = "url-item";
-        urlItem.innerHTML = `
-          <code>http://${ip}:${data.app_port}</code>
-          <button class="copy-btn" title="Copy URL" onclick="copyToClipboard('http://${ip}:${data.app_port}')">📋</button>
-        `;
-        urlListDiv.appendChild(urlItem);
-      }
-    });
+  // Only show current IP in URL list
+  if (data.ip && data.app_port) {
+    const urlItem = document.createElement("div");
+    urlItem.className = "url-item";
+    urlItem.innerHTML = `
+      <code>http://${data.ip}:${data.app_port}</code>
+      <button class="copy-btn" title="Copy URL" onclick="copyToClipboard('http://${data.ip}:${data.app_port}')">📋</button>
+    `;
+    urlListDiv.appendChild(urlItem);
   }
 
   await refreshOutbox();
@@ -1345,6 +1407,21 @@ window.copyToClipboard = function(text) {
 };
 
 window.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM Content Loaded - setting up event listeners");
+  
+  // Check if elements exist
+  const dropzone = byId("dropzone");
+  const fileInput = byId("fileInput");
+  const connectBtn = byId("connectPeer");
+  const peerIpInput = byId("peerIp");
+  
+  console.log("Elements found:", {
+    dropzone: !!dropzone,
+    fileInput: !!fileInput,
+    connectBtn: !!connectBtn,
+    peerIpInput: !!peerIpInput
+  });
+  
   configureDropzone();
   configureCopyButton();
   configureThemeToggle();
@@ -1368,6 +1445,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const showAllIpsBtn = byId("showAllIps");
   if (showAllIpsBtn) {
     showAllIpsBtn.addEventListener("click", async () => {
+      console.log("Show All IPs button clicked");
       // Load fresh data each time to ensure we have the latest IPs
       await loadIpsData();
       
@@ -1375,6 +1453,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (allIpsBox.style.display === "none" || !allIpsBox.style.display) {
         // Get current IP to exclude it from the list
         const currentIp = window.location.hostname;
+        console.log("Current IP:", currentIp);
+        console.log("All IPs loaded:", allIps);
         
         // Filter out current IP and invalid IPs
         const filteredIps = allIps.filter(ip => 
@@ -1384,6 +1464,8 @@ window.addEventListener("DOMContentLoaded", () => {
           !ip.startsWith('fe80:') &&
           ip !== '0.0.0.0'
         );
+        
+        console.log("Filtered IPs:", filteredIps);
         
         if (filteredIps.length === 0) {
           allIpsBox.innerHTML = "<p style='color: #64748b;'>No additional IPs found</p>";
@@ -1404,7 +1486,6 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const connectBtn = byId("connectPeer");
   const sendBtn = byId("sendFiles");
   const deleteSelectedOutboxBtn = byId("deleteSelectedOutbox");
   const deleteAllOutboxBtn = byId("deleteAllOutbox");

@@ -35,10 +35,10 @@
             <span class="status-badge connection-status status-disconnected">Disconnected</span>
           </div>
           <p class="card-subtitle">Share your IP with peers to receive their files securely</p>
-          <p>Your Host URLs:</p>
+          <p>Your Host IP:</p>
           <div class="url-box">
-            <code id="localUrl">http://{{ local_ip }}:{{ app_port }}</code>
-            <button class="copy-btn" id="copyUrlBtn" title="Copy URL">📋</button>
+            <code id="localUrl">{{ local_ip }}:{{ app_port }}</code>
+            <button class="copy-btn" id="copyUrlBtn" title="Copy IP">📋</button>
           </div>
           <div id="allUrls" class="url-list" style="display: none;">
             <p>Alternative URLs (if the above doesn't work):</p>
@@ -104,7 +104,7 @@
             <button id="cancelTransfer" class="btn btn-success transfer-cancel" disabled>Cancel</button>
           </div>
           <div class="progress-container">
-            <div id="transferSpinner" class="spinner hidden" aria-hidden="true"></div>
+            <!-- Spinner removed, only red bar/circle used for progress -->
             <div id="transferProgressText" class="transfer-progress-text">Ready to transfer</div>
             <div class="progress hidden"><div id="bar" class="bar"></div></div>
             <span id="progressPercent" class="progress-text hidden">0%</span>
@@ -113,10 +113,8 @@
           <p id="stats" class="stats-text">Status: <span class="status-value">idle</span></p>
           <p id="status" class="status-text">Ready to transfer</p>
           <div id="transferDetails" class="transfer-details" style="display: none;">
-            <p>📄 <strong>Current File:</strong> <span id="currentFileName">--</span></p>
-            <p>💾 <strong>Current Size:</strong> <span id="currentFileSize">--</span></p>
+            <p> <strong>Current Size:</strong> <span id="currentFileSize">--</span></p>
             <p>📊 <strong>Total Size:</strong> <span id="totalFileSize">0 B</span></p>
-            <p>⏱️ <strong>Time Taken:</strong> <span id="timeTaken">--</span></p>
             <p>🎯 <strong>Files:</strong> <span id="filesCompleted">0</span></p>
           </div>
         </section>

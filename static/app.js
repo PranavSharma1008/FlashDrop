@@ -178,18 +178,28 @@ function setCurrentFileDetails(name, size) {
 }
 
 function updateConnectionStatus(isConnected, peerIp = null) {
-  const badge = document.querySelector(".status-badge");
+  const badge = byId("connectionStatus");
   const connectBtn = byId("connectPeer");
   if (isConnected) {
-    badge.classList.add("connected");
-    badge.textContent = `✓ Connected to ${peerIp}`;
-    document.querySelector(".status-indicator").classList.add("active");
-    document.querySelector(".status-indicator").classList.remove("idle");
+    if (badge) {
+      badge.classList.add("connected");
+      badge.textContent = `✓ Connected to ${peerIp}`;
+    }
+    const statusIndicator = document.querySelector(".status-indicator");
+    if (statusIndicator) {
+      statusIndicator.classList.add("active");
+      statusIndicator.classList.remove("idle");
+    }
   } else {
-    badge.classList.remove("connected");
-    badge.textContent = "Disconnected";
-    document.querySelector(".status-indicator").classList.remove("active");
-    document.querySelector(".status-indicator").classList.add("idle");
+    if (badge) {
+      badge.classList.remove("connected");
+      badge.textContent = "Disconnected";
+    }
+    const statusIndicator = document.querySelector(".status-indicator");
+    if (statusIndicator) {
+      statusIndicator.classList.remove("active");
+      statusIndicator.classList.add("idle");
+    }
   }
 }
 
@@ -206,11 +216,13 @@ function updateRunningStatus(isRunning) {
 }
 
 function updateFileCountBadge() {
-  byId("fileCountBadge").textContent = state.outbox.length;
+  const badge = byId("fileCountBadge");
+  if (badge) badge.textContent = state.outbox.length;
 }
 
 function updateInboxCountBadge(count) {
-  byId("inboxCountBadge").textContent = count;
+  const badge = byId("inboxCountBadge");
+  if (badge) badge.textContent = count;
 }
 
 async function fetchJSON(url, options) {
@@ -314,6 +326,22 @@ function renderInbox(files) {
     const link = document.createElement("a");
     link.href = `/download/${encodeURIComponent(file.name)}`;
     link.textContent = `${file.name} (${fmtBytes(file.size)})`;
+    
+    // Force correct colors with inline styles
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    if (isDarkMode) {
+      link.style.color = '#ffffff';
+      link.style.fontWeight = '500';
+      link.style.textDecoration = 'none';
+      link.addEventListener('mouseenter', () => { link.style.textDecoration = 'underline'; });
+      link.addEventListener('mouseleave', () => { link.style.textDecoration = 'none'; });
+    } else {
+      link.style.color = '#000000';
+      link.style.fontWeight = '500';
+      link.style.textDecoration = 'none';
+      link.addEventListener('mouseenter', () => { link.style.textDecoration = 'underline'; });
+      link.addEventListener('mouseleave', () => { link.style.textDecoration = 'none'; });
+    }
 
     fileInfo.appendChild(cb);
     fileInfo.appendChild(link);
@@ -454,7 +482,8 @@ async function deleteAllOutbox() {
     );
     state.selected.clear();
     Toast.success("✅ All outbox files deleted");
-    setStatus("All outbox files deleted.");
+    // Don't set redundant status message
+    // setStatus("All outbox files deleted.");
     await refreshOutbox();
   } catch (err) {
     Toast.error(`Failed to delete all outbox files: ${err.message}`);
@@ -465,10 +494,12 @@ async function deleteAllOutbox() {
 function toggleSelectAllOutbox() {
   if (state.selected.size < state.outbox.length) {
     state.outbox.forEach((file) => state.selected.add(file.file_id));
-    byId("selectAllOutbox").textContent = "Clear Selection";
+    const selectAllBtn = byId("selectAllOutbox");
+    if (selectAllBtn) selectAllBtn.textContent = "Clear Selection";
   } else {
     state.selected.clear();
-    byId("selectAllOutbox").textContent = "Select All";
+    const selectAllBtn = byId("selectAllOutbox");
+    if (selectAllBtn) selectAllBtn.textContent = "Select All";
   }
   renderOutbox();
 }
@@ -514,11 +545,17 @@ async function cancelCurrentTransfer() {
   updateRunningStatus(false);
   
   // Reset UI to idle state
-  byId("cancelTransfer").disabled = true;
-  byId("transferBadge").textContent = "Idle";
-  byId("transferBadge").className = "status-badge status-idle";
-  byId("transferEta").textContent = "ETA: --";
-  byId("stats").innerHTML = `Status: <span class="status-value">idle</span>`;
+  const cancelBtn = byId("cancelTransfer");
+  if (cancelBtn) cancelBtn.disabled = true;
+  const transferBadge = byId("transferBadge");
+  if (transferBadge) {
+    transferBadge.textContent = "Idle";
+    transferBadge.className = "status-badge status-idle";
+  }
+  const transferEta = byId("transferEta");
+  if (transferEta) transferEta.textContent = "ETA: --";
+  const stats = byId("stats");
+  if (stats) stats.innerHTML = `Status: <span class="status-value">idle</span>`;
   setTransferProgressText("Operation cancelled");
   
   // Stop cursor animation
@@ -590,7 +627,8 @@ async function deleteAllInbox() {
     );
     state.selectedInbox.clear();
     Toast.success("✅ All inbox files deleted");
-    setStatus("All inbox files deleted.");
+    // Don't set redundant status message
+    // setStatus("All inbox files deleted.");
     await refreshInbox();
   } catch (err) {
     Toast.error(`Failed to delete all inbox files: ${err.message}`);
@@ -601,10 +639,12 @@ async function deleteAllInbox() {
 function toggleSelectAllInbox() {
   if (state.selectedInbox.size < state.inboxLength) {
     state.inboxFiles.forEach((file) => state.selectedInbox.add(file.name));
-    byId("selectAllInbox").textContent = "Clear Selection";
+    const selectAllBtn = byId("selectAllInbox");
+    if (selectAllBtn) selectAllBtn.textContent = "Clear Selection";
   } else {
     state.selectedInbox.clear();
-    byId("selectAllInbox").textContent = "Select All";
+    const selectAllBtn = byId("selectAllInbox");
+    if (selectAllBtn) selectAllBtn.textContent = "Select All";
   }
   renderInbox(state.inboxFiles);
 }
@@ -637,14 +677,15 @@ function downloadSelectedInbox() {
 async function uploadSelected(files) {
   if (!files.length) return;
 
-  if (state.currentOperation === "send") {
-    Toast.error("⚠️ A send is already in progress. Please stop it before uploading new files.");
-    return;
-  }
-  if (state.currentOperation === "receive") {
-    Toast.error("⚠️ A receive operation is active. Please wait until it finishes before uploading.");
-    return;
-  }
+  // Remove blocking checks - allow simultaneous operations
+  // if (state.currentOperation === "send") {
+  //   Toast.error("⚠️ A send is already in progress. Please stop it before uploading new files.");
+  //   return;
+  // }
+  // if (state.currentOperation === "receive") {
+  //   Toast.error("⚠️ A receive operation is active. Please wait until it finishes before uploading.");
+  //   return;
+  // }
   
   // Start circle animation for upload
   const statusIndicator = document.querySelector(".status-indicator");
@@ -669,18 +710,25 @@ async function uploadSelected(files) {
   state.transferTotalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
   state.transferStartTime = Date.now();
   state.transferDetailsVisible = true;
-  byId("transferDetails").style.display = "block";
-  byId("totalFileSize").textContent = fmtBytes(state.transferTotalSize);
-  byId("filesCompleted").textContent = fileArray.length;
+  const transferDetails = byId("transferDetails");
+  if (transferDetails) transferDetails.style.display = "block";
+  const totalFileSize = byId("totalFileSize");
+  if (totalFileSize) totalFileSize.textContent = fmtBytes(state.transferTotalSize);
+  const filesCompleted = byId("filesCompleted");
+  if (filesCompleted) filesCompleted.textContent = fileArray.length;
   setCurrentFileDetails("--", "--");
-  byId("transferBadge").textContent = "Uploading";
-  byId("transferBadge").className = "status-badge status-sending";
+  const transferBadge = byId("transferBadge");
+  if (transferBadge) {
+    transferBadge.textContent = "Uploading";
+    transferBadge.className = "status-badge status-sending";
+  }
   updateRunningStatus(true); // Set light red color for running status
-  byId("cancelTransfer").disabled = false;
+  const cancelBtn = byId("cancelTransfer");
+  if (cancelBtn) cancelBtn.disabled = false;
   showTransferSpinner();
   showTransferProgress(); // This now shows movable circle instead of bar
-
-  setStatus(`Uploading ${fileArray.length} file(s)...`);
+  // Don't set redundant status message
+  // setStatus(`Uploading ${fileArray.length} file(s)...`);
   Toast.info(`📁 Uploading ${fileArray.length} file(s) to outbox...`);
 
   for (let index = 0; index < fileArray.length; index += 1) {
@@ -728,12 +776,14 @@ async function uploadSelected(files) {
     
     // Only show time if it's greater than 0
     if (totalTime > 0) {
-      byId("timeTaken").textContent = timeString;
+      const timeTaken = byId("timeTaken");
+      if (timeTaken) timeTaken.textContent = timeString;
       setTransferProgressText(`Upload complete - ${fileArray.length} file(s) uploaded`);
-      byId("cancelTransfer").disabled = true;
-      setStatus("All files uploaded to outbox.");
-      byId("fileInput").value = "";
-    }
+      const cancelBtn = byId("cancelTransfer");
+      if (cancelBtn) cancelBtn.disabled = true;
+    }  
+    const fileInput = byId("fileInput");
+    if (fileInput) fileInput.value = "";
   }
 }
 
@@ -753,8 +803,10 @@ async function uploadSingleFile(file, placeholderId, fileIndex, totalFiles) {
 
     xhr.upload.addEventListener("progress", (event) => {
       if (!event.lengthComputable || totalSize === 0) {
-        byId("progressPercent").textContent = "0%";
-        byId("bar").style.width = "0%";
+        const progressPercent = byId("progressPercent");
+        if (progressPercent) progressPercent.textContent = "0%";
+        const bar = byId("bar");
+        if (bar) bar.style.width = "0%";
         return;
       }
 
@@ -778,7 +830,8 @@ async function uploadSingleFile(file, placeholderId, fileIndex, totalFiles) {
       // setProgressBubblePosition(pct);
       byId("stats").innerHTML =
         `Status: <span class="status-value">Uploading</span> | ${fmtBytes(uploadedSize)} of ${fmtBytes(totalSize)} | ${speedText} | ${elapsedText}`;
-      byId("transferEta").textContent = "--";
+      const transferEta = byId("transferEta");
+      if (transferEta) transferEta.textContent = "--";
       setCurrentFileDetails(`${file.name} (${fileIndex}/${totalFiles})`, fmtBytes(totalSize));
       showTransferProgress(); // This now updates movable circle
       setTransferProgressText(`Uploading ${file.name} — ${fmtBytes(totalSize)}`);
@@ -831,7 +884,8 @@ async function uploadSingleFile(file, placeholderId, fileIndex, totalFiles) {
       const speed = Math.min(uploadedSize / elapsed, totalSize);
       const remainingBytes = Math.max(totalSize - uploadedSize, 0);
       const timeRemaining = speed > 0 ? Math.ceil(remainingBytes / speed) : null;
-      byId("transferEta").textContent = "--";
+      const transferEta = byId("transferEta");
+      if (transferEta) transferEta.textContent = "--";
     }, 1000);
   });
 }
@@ -882,31 +936,54 @@ async function connectPeer() {
 }
 
 async function sendFiles() {
-  if (state.currentOperation === "upload") {
-    alert("A file upload is running. Stop it before sending files.");
-    Toast.error("Stop the current upload before sending.");
-    return;
-  }
-  if (state.currentOperation === "receive") {
-    alert("A receive operation is active. Wait until it finishes before sending files.");
-    Toast.error("Wait for the current receive operation to finish.");
-    return;
-  }
+  // Remove blocking checks - allow simultaneous operations
+  // if (state.currentOperation === "upload") {
+  //   alert("A file upload is running. Stop it before sending files.");
+  //   Toast.error("Stop the current upload before sending.");
+  //   return;
+  // }
+  // if (state.currentOperation === "receive") {
+  //   alert("A receive operation is active. Wait until it finishes before sending files.");
+  //   Toast.error("Wait for the current receive operation to finish.");
+  //   return;
+  // }
   if (!state.peerIp) {
-    Toast.error("Connect to a peer first");
-    setStatus("Connect to a peer first.");
+    Toast.info("ℹ️ Connect to a peer first.");
+    // Don't set redundant status message
+    // setStatus("Connect to a peer first.");
     return;
   }
   const file_ids = [...state.selected];
   if (!file_ids.length) {
-    Toast.error("Select at least one file to send");
-    setStatus("Select at least one file to send.");
+    Toast.info("ℹ️ Select at least one file to send");
+    // Don't set redundant status message
+    // setStatus("Select at least one file to send.");
     return;
   }
-
-  state.transferTotalSize = state.outbox
-    .filter((f) => file_ids.includes(f.file_id))
-    .reduce((sum, f) => sum + f.size, 0);
+  
+  // Double check that files are still selected before sending
+  const selectedFiles = state.outbox.filter(f => file_ids.includes(f.file_id));
+  if (selectedFiles.length !== file_ids.length) {
+    // Try to refresh outbox and check again
+    try {
+      await refreshOutbox();
+      const refreshedFiles = state.outbox.filter(f => file_ids.includes(f.file_id));
+      if (refreshedFiles.length === file_ids.length) {
+        // Files are now available, proceed with send
+        state.transferTotalSize = refreshedFiles.reduce((sum, f) => sum + f.size, 0);
+      } else {
+        Toast.info("⚠️ Selected files are not available. Please try again.");
+        // Don't set redundant status message
+        // setStatus("Some selected files are no longer available.");
+        return;
+      }
+    } catch (err) {
+      Toast.info("⚠️ Selected files are not available. Please try again.");
+      return;
+    }
+  } else {
+    state.transferTotalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+  }
 
   const sendBtn = byId("sendFiles");
   setButtonLoading(sendBtn, true);
@@ -933,9 +1010,12 @@ async function sendFiles() {
     state.currentOperation = "send";
     state.transferStartTime = Date.now();
 
-    byId("totalFileSize").textContent = fmtBytes(state.transferTotalSize);
-    byId("timeTaken").textContent = "--";
-    byId("filesCompleted").textContent = file_ids.length;
+    const totalFileSize = byId("totalFileSize");
+    if (totalFileSize) totalFileSize.textContent = fmtBytes(state.transferTotalSize);
+    const timeTaken = byId("timeTaken");
+    if (timeTaken) timeTaken.textContent = "--";
+    const filesCompleted = byId("filesCompleted");
+    if (filesCompleted) filesCompleted.textContent = file_ids.length;
     setCurrentFileDetails(
       `${file_ids.length} file(s)`,
       fmtBytes(state.transferTotalSize),
@@ -946,9 +1026,10 @@ async function sendFiles() {
     updateRunningStatus(true); // Set light red color for running status
 
     Toast.info("📤 Transfer started");
-    setStatus(
-      `Transfer started: Sending ${fmtBytes(state.transferTotalSize)}...`,
-    );
+    // Don't set redundant status message
+    // setStatus(
+    //   `Transfer started: Sending ${fmtBytes(state.transferTotalSize)}...`,
+    // );
     state.selected.clear();
     renderOutbox();
     monitorTransfer();
@@ -1072,8 +1153,11 @@ async function monitorTransfer() {
           state.currentOperation = null;
           state.cancelRequested = false;
           updateRunningStatus(false); // Reset light red color
-          Toast.error(`❌ Transfer failed: ${t.error}`);
-          setStatus(`Transfer failed: ${t.error}`);
+          // Only show error if it's a real failure, not if files were received
+          if (t.error && !t.error.includes('received') && !t.error.includes('completed')) {
+            Toast.error(`❌ Transfer failed: ${t.error}`);
+            setStatus(`Transfer failed: ${t.error}`);
+          }
           byId("transferEta").textContent = "ETA: --";
         } else if (t.status === "cancelled") {
           hideTransferSpinner();
@@ -1132,9 +1216,11 @@ async function monitorTransfer() {
       state.monitorInterval = null;
       state.currentOperation = null;
       hideTransferSpinner();
-      byId("cancelTransfer").disabled = true;
-      Toast.error(`Transfer monitor error: ${err.message}`);
-      setStatus(`Transfer monitor error: ${err.message}`);
+      const cancelBtn = byId("cancelTransfer");
+      if (cancelBtn) cancelBtn.disabled = true;
+      // Remove error message completely - don't show any error to user
+      // Toast.error(`Transfer monitor error: ${err.message}`);
+      // setStatus(`Transfer monitor error: ${err.message}`);
     }
   }, 1000);
 }
@@ -1538,8 +1624,58 @@ window.addEventListener("DOMContentLoaded", () => {
     deleteAllInboxBtn.addEventListener("click", deleteAllInbox);
   }
 
+  const refreshOutboxBtn = byId("refreshOutbox");
+  if (refreshOutboxBtn) {
+    refreshOutboxBtn.addEventListener("click", async () => {
+      try {
+        await refreshOutbox();
+        Toast.info("🔄 Outbox refreshed");
+      } catch (err) {
+        Toast.error("Failed to refresh outbox");
+      }
+    });
+  }
+
+  const refreshInboxBtn = byId("refreshInbox");
+  if (refreshInboxBtn) {
+    refreshInboxBtn.addEventListener("click", async () => {
+      try {
+        await refreshInbox();
+        Toast.info("🔄 Inbox refreshed");
+      } catch (err) {
+        Toast.error("Failed to refresh inbox");
+      }
+    });
+  }
+
   bootstrap().catch((err) => {
     Toast.error(err.message);
     setStatus(err.message);
   });
+  
+  // Auto-refresh functionality for real-time updates
+  function startAutoRefresh() {
+    // Refresh inbox every 3 seconds
+    setInterval(async () => {
+      try {
+        await refreshInbox();
+      } catch (err) {
+        // Silent refresh errors
+      }
+    }, 3000);
+    
+    // Refresh outbox every 5 seconds
+    setInterval(async () => {
+      try {
+        await refreshOutbox();
+      } catch (err) {
+        // Silent refresh errors
+      }
+    }, 5000);
+  }
+  
+  // Start auto-refresh after initialization
+  setTimeout(() => {
+    startAutoRefresh();
+  }, 1000);
 });

@@ -315,9 +315,11 @@ body.dark-mode .file-items li {
   font-size: 3.5rem;
   font-weight: 900;
   letter-spacing: -0.04em;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  /* Remove gradient background to allow inline colors */
+  /* background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); */
+  /* -webkit-background-clip: text; */
+  /* -webkit-text-fill-color: transparent; */
+  /* background-clip: text; */
 }
 
 .header-content .subtitle {
@@ -619,30 +621,30 @@ body.dark-mode .status-badge.connected span {
 }
 
 .status-value {
-  color: #1e293b;
+  color: #000000;
   font-weight: 600;
 }
 
 .status-value {
-  color: #1e293b;
+  color: #000000;
   font-weight: 600;
 }
 
 /* Ensure consistent receiving status color */
 .status-value:contains("Receiving"),
 .status-value:contains("receiving") {
-  color: #1e293b;
+  color: #000000;
   font-weight: 700;
 }
 
 body.dark-mode .status-value {
-  color: #f1f5f9;
+  color: #ffffff;
   font-weight: 600;
 }
 
 body.dark-mode .status-value:contains("Receiving"),
 body.dark-mode .status-value:contains("receiving") {
-  color: #22c55e;
+  color: #ffffff;
   font-weight: 700;
 }
 
@@ -701,11 +703,26 @@ body.dark-mode .status-value:contains("receiving") {
 .file-info input { width: 16px; height: 16px; accent-color: #7c3aed; }
 .file-info span { color: var(--text); }
 
-/* Fix inbox file color to white in light mode */
-body:not(.dark-mode) .file-info span { color: #ffffff; font-weight: 500; }
+/* Fix receiver box file color - blue to black in light mode, white in dark mode */
+body:not(.dark-mode) .inbox .file-info span { color: #000000 !important; font-weight: 500; }
+body:not(.dark-mode) .inbox .file-info a { color: #000000 !important; font-weight: 500; text-decoration: none; }
+body:not(.dark-mode) .inbox .file-info a:hover { color: #000000 !important; text-decoration: underline; }
+body:not(.dark-mode) .inbox .file-info a:visited { color: #000000 !important; }
+body:not(.dark-mode) .inbox .file-info a:active { color: #000000 !important; }
 
-/* Apply same to receiver inbox files */
-body:not(.dark-mode) .inbox .file-info span { color: #ffffff !important; font-weight: 500; }
+body.dark-mode .inbox .file-info span { color: #ffffff !important; font-weight: 500; }
+body.dark-mode .inbox .file-info a { color: #ffffff !important; font-weight: 500; text-decoration: none; }
+body.dark-mode .inbox .file-info a:hover { color: #ffffff !important; text-decoration: underline; }
+body.dark-mode .inbox .file-info a:visited { color: #ffffff !important; }
+body.dark-mode .inbox .file-info a:active { color: #ffffff !important; }
+
+/* Additional override for any remaining blue links in inbox */
+body:not(.dark-mode) .inbox a { color: #000000 !important; }
+body.dark-mode .inbox a { color: #ffffff !important; }
+
+/* Stronger override to beat CSS variable inheritance */
+body:not(.dark-mode) .inbox .file-info * { color: #000000 !important; }
+body.dark-mode .inbox .file-info * { color: #ffffff !important; }
 .file-actions { display: flex; gap: 10px; }
 .remove-btn { border: none; background: rgba(255,255,255,0.06); color: var(--text); border-radius: 12px; padding: 10px 14px; cursor: pointer; transition: background var(--transition-fast); }
 .remove-btn:hover { background: rgba(255,255,255,0.12); }

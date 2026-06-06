@@ -974,3 +974,94 @@ body.dark-mode .transfer-details p { color: #ffffff; }
   height: 32px;
   display: block;
 }
+
+.info-page-wrap {
+  max-width: 900px;
+}
+
+.info-page-header .header-top {
+  align-items: center;
+}
+
+.info-brand-link {
+  text-decoration: none;
+}
+
+.info-back-btn {
+  width: auto;
+  white-space: nowrap;
+}
+
+.info-page-card {
+  margin-top: 12px;
+}
+
+.info-page-content {
+  padding: 8px 4px 12px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.info-lead {
+  font-size: 1.05rem;
+  color: var(--muted-strong);
+  margin: 0 0 18px;
+}
+
+.info-feature-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.info-feature-list li {
+  margin-bottom: 12px;
+}
+
+.info-status-box,
+.info-contact-box {
+  text-align: center;
+  padding: 28px 20px;
+  border-radius: 14px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid var(--panel-border);
+}
+
+.info-status-icon {
+  font-size: 2.4rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.info-status-box h4 {
+  margin: 0 0 10px;
+  font-size: 1.3rem;
+}
+
+.info-status-box p {
+  margin: 0 0 10px;
+  color: var(--muted-strong);
+}
+
+.info-mail-link {
+  display: inline-block;
+  margin: 8px 0 18px;
+  font-size: 1.05rem;
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.info-mail-link:hover {
+  text-decoration: underline;
+}
+
+.info-mail-btn {
+  display: inline-flex;
+  width: auto;
+}
+
+.info-credit {
+  margin-top: 20px;
+  font-weight: 600;
+  color: var(--muted-strong);
+}

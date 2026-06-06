@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title }} - FlashDrop</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container info-page-wrap">
+      <header class="header info-page-header">
+        <div class="header-top">
+          <div class="header-content">
+            <h1>
+              <a href="/" class="info-brand-link">
+                <span style="color: #22c55e; font-weight: 900;">F</span><span style="color: #dc2626; font-weight: 900;">lash</span><span style="color: #22c55e; font-weight: 900;">D</span><span style="color: #dc2626; font-weight: 900;">rop</span>
+              </a>
+            </h1>
+          </div>
+          <a href="/" class="btn btn-secondary info-back-btn">Back to App</a>
+        </div>
+      </header>
+
+      <section class="card info-page-card">
+        <div class="card-header">
+          <h3>{{ page_title }}</h3>
+        </div>
+
+        {% if page_id == "features" %}
+        <div class="info-page-content">
+          <p class="info-lead">FlashDrop is built for fast, simple, local file sharing between devices on the same network.</p>
+          <ul class="info-feature-list">
+            <li><strong>Direct P2P transfer</strong> — Files move device-to-device over TCP sockets with no cloud server.</li>
+            <li><strong>Large file support</strong> — Chunked streaming handles big files safely with progress tracking.</li>
+            <li><strong>Multi-file queue</strong> — Upload, select, and send multiple files from an outbox in one flow.</li>
+            <li><strong>Drag and drop upload</strong> — Drop files straight into the app to add them to your outbox.</li>
+            <li><strong>Live transfer stats</strong> — Real-time speed, percentage, and ETA while sending or receiving.</li>
+            <li><strong>Receiver inbox</strong> — All received files stay in one place until you save or delete them.</li>
+            <li><strong>QR connect</strong> — Scan or share a QR code to connect peers quickly without typing IPs.</li>
+            <li><strong>Peer security controls</strong> — Optional PIN, allow/deny unknown peers, and cleanup options.</li>
+            <li><strong>Modern UI</strong> — Clean cards, dark mode, toast notifications, and responsive layout.</li>
+            <li><strong>Works on your LAN</strong> — Share files across Mac, Windows, and other devices on the same Wi-Fi.</li>
+          </ul>
+        </div>
+        {% elif page_id == "get-app" %}
+        <div class="info-page-content">
+          <div class="info-status-box">
+            <span class="info-status-icon">🚧</span>
+            <h4>Still In Development</h4>
+            <p>The standalone FlashDrop download is not available yet. We are working on packaged builds for Mac and Windows.</p>
+            <p>For now, run FlashDrop locally with Python from the project repository.</p>
+          </div>
+        </div>
+        {% elif page_id == "about" %}
+        <div class="info-page-content">
+          <p class="info-lead">FlashDrop is a local peer-to-peer file sharing app inspired by tools like SHAREit, built for people who want fast transfers without uploading to the cloud.</p>
+          <p>It runs a small Flask web server on your machine and uses direct TCP socket transfers between devices on the same network. One device uploads files to its outbox, connects to another device by IP, and sends selected files straight across.</p>
+          <p>On the receiving side, files appear in the Receiver Inbox where you can save them to your Downloads folder, delete them, or manage multiple files at once.</p>
+          <p>FlashDrop focuses on speed, simplicity, and privacy: your files stay on your local network, transfers show live progress, and the interface is designed to be easy even for beginners.</p>
+          <p class="info-credit">Made with care by Pranav Sharma.</p>
+        </div>
+        {% elif page_id == "contact" %}
+        <div class="info-page-content">
+          <p class="info-lead">Have feedback, questions, or ideas for FlashDrop? Send an email and we will get back to you.</p>
+          <div class="info-contact-box">
+            <p><strong>Email</strong></p>
+            <a href="mailto:{{ contact_email }}" class="info-mail-link">{{ contact_email }}</a>
+            <a href="mailto:{{ contact_email }}?subject=FlashDrop%20Support" class="btn btn-primary info-mail-btn">Open Mail App</a>
+          </div>
+        </div>
+        {% endif %}
+      </section>
+    </div>
+  </body>
+</html>

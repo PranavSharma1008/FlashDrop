@@ -4,6 +4,8 @@ from pathlib import Path
 
 APP_HOST = "0.0.0.0"
 APP_PORT = 5000
+USE_HTTPS = os.environ.get("USE_HTTPS", "1") == "1"
+APP_PROTOCOL = "https" if USE_HTTPS else "http"
 TCP_HOST = "0.0.0.0"
 TCP_PORT = 9009
 CHUNK_SIZE = 16 * 1024 * 1024  # 16 MB chunks (larger = faster, less overhead)

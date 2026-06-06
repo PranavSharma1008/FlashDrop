@@ -2,6 +2,8 @@ import atexit
 import json
 import os
 import socket
+import ssl
+import subprocess
 import tempfile
 import threading
 import urllib.error
@@ -10,7 +12,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, Response, stream_with_context
 
-from p2p.config import APP_HOST, APP_PORT, TMP_DIR, TCP_HOST, TCP_PORT
+from p2p.config import APP_HOST, APP_PORT, BASE_DIR, TMP_DIR, TCP_HOST, TCP_PORT, USE_HTTPS
 from p2p.network import get_all_local_ips, get_local_ip
 from p2p.tcp_server import TCPReceiverServer
 from p2p.transfer_manager import TransferManager
@@ -52,8 +54,54 @@ def local_info():
             "all_ips": get_all_local_ips(),
             "app_port": APP_PORT,
             "tcp_port": TCP_PORT,
+            "protocol": request.scheme,
             "settings": transfer_manager.get_settings(),
         }
+    )
+
+
+def _fetch_peer_local_info(peer_ip: str, app_port: int) -> tuple[dict, str]:
+    errors = []
+    for protocol in ("https", "http"):
+        url = f"{protocol}://{peer_ip}:{app_port}/api/local-info"
+        try:
+            if protocol == "https":
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                opener = urllib.request.urlopen(url, timeout=5.0, context=ctx)  # noqa: S310
+            else:
+                opener = urllib.request.urlopen(url, timeout=5.0)  # noqa: S310
+            with opener as response:
+                body = response.read().decode("utf-8")
+                return json.loads(body), body
+        except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError) as e:
+            errors.append(f"{protocol}: {e}")
+    raise urllib.error.URLError("; ".join(errors))
+
+
+@app.get("/features")
+def features_page():
+    return render_template("info_page.html", page_title="Features", page_id="features")
+
+
+@app.get("/get-app")
+def get_app_page():
+    return render_template("info_page.html", page_title="Download", page_id="get-app")
+
+
+@app.get("/about")
+def about_page():
+    return render_template("info_page.html", page_title="About", page_id="about")
+
+
+@app.get("/contact")
+def contact_page():
+    return render_template(
+        "info_page.html",
+        page_title="Contact",
+        page_id="contact",
+        contact_email="pranav2410991479@gmail.com",
     )
 
 
@@ -76,14 +124,10 @@ def connect_peer():
     if not peer_ip:
         return jsonify({"ok": False, "error": "Peer IP is required."}), 400
 
-    # First check HTTP connectivity
-    url = f"http://{peer_ip}:{app_port}/api/local-info"
     try:
-        with urllib.request.urlopen(url, timeout=5.0) as response:  # noqa: S310
-            body = response.read().decode("utf-8")
-            peer_info = json.loads(body)
-    except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError) as e:
-        error_msg = f"Could not connect to peer HTTP API at {peer_ip}:{app_port}. {str(e)}"
+        peer_info, body = _fetch_peer_local_info(peer_ip, app_port)
+    except urllib.error.URLError as e:
+        error_msg = f"Could not connect to peer API at {peer_ip}:{app_port}. {str(e)}"
         return jsonify({"ok": False, "error": error_msg}), 400
 
     # Test TCP connectivity
@@ -261,5 +305,68 @@ def remove_inbox_file(filename: str):
     return jsonify({"ok": True})
 
 
+def _ensure_local_cert() -> tuple[str, str] | None:
+    cert_dir = BASE_DIR / "certs"
+    cert_file = cert_dir / "flashdrop.pem"
+    key_file = cert_dir / "flashdrop.key"
+    if cert_file.exists() and key_file.exists():
+        return str(cert_file), str(key_file)
+
+    cert_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        subprocess.run(
+            [
+                "openssl",
+                "req",
+                "-x509",
+                "-newkey",
+                "rsa:2048",
+                "-keyout",
+                str(key_file),
+                "-out",
+                str(cert_file),
+                "-days",
+                "3650",
+                "-nodes",
+                "-subj",
+                "/CN=FlashDrop Local/O=FlashDrop",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return str(cert_file), str(key_file)
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def _ssl_context():
+    if not USE_HTTPS:
+        return None
+
+    cert_paths = _ensure_local_cert()
+    if cert_paths:
+        return cert_paths
+
+    try:
+        import OpenSSL  # noqa: F401
+    except ImportError:
+        print("HTTPS disabled: install OpenSSL CLI or pyOpenSSL to enable secure downloads.")
+        return None
+    return "adhoc"
+
+
 if __name__ == "__main__":
-    app.run(host=APP_HOST, port=APP_PORT, debug=True, use_reloader=False)
+    ssl_context = _ssl_context()
+    protocol = "https" if ssl_context else "http"
+    local_ip = get_local_ip()
+    print(f"FlashDrop running at {protocol}://{local_ip}:{APP_PORT}")
+    if ssl_context:
+        print("Using HTTPS so files save directly without Chrome download warnings.")
+    app.run(
+        host=APP_HOST,
+        port=APP_PORT,
+        debug=True,
+        use_reloader=False,
+        ssl_context=ssl_context,
+    )

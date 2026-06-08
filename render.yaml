@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: flashdrop
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: PYTHON_VERSION
+        value: 3.9.0

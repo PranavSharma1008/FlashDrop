@@ -156,15 +156,15 @@
         <div class="footer-links">
           <div class="footer-section">
             <h4>Product</h4>
-            <a href="/features" target="_blank" rel="noopener noreferrer" class="footer-link">Features</a>
-            <a href="/get-app" target="_blank" rel="noopener noreferrer" class="footer-link">Download</a>
+            <a href="{{ url_for('features_page') }}" target="_blank" rel="noopener noreferrer" class="footer-link">Features</a>
+            <a href="{{ url_for('get_app_page') }}" target="_blank" rel="noopener noreferrer" class="footer-link">Download</a>
             <a href="#" class="footer-link">Documentation</a>
           </div>
           <div class="footer-section">
             <h4>Company</h4>
-            <a href="/about" target="_blank" rel="noopener noreferrer" class="footer-link">About</a>
+            <a href="{{ url_for('about_page') }}" target="_blank" rel="noopener noreferrer" class="footer-link">About</a>
             <a href="#" class="footer-link">Blog</a>
-            <a href="/contact" target="_blank" rel="noopener noreferrer" class="footer-link">Contact</a>
+            <a href="{{ url_for('contact_page') }}" target="_blank" rel="noopener noreferrer" class="footer-link">Contact</a>
           </div>
           <div class="footer-section">
             <h4>Legal</h4>
@@ -187,6 +187,6 @@
       </div>
     </footer>
 
-    <script src="{{ url_for('static', filename='app.js') }}?v=4" defer></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=6" defer></script>
   </body>
 </html>

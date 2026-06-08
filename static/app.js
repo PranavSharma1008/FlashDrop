@@ -3,7 +3,6 @@ const state = {
   tcpPort: 9009,
   localAppPort: 5000,
   localTcpPort: 9009,
-  appProtocol: window.location.protocol.replace(":", "") || "https",
   outbox: [],
   selected: new Set(),
   selectedInbox: new Set(),
@@ -103,21 +102,14 @@ const DOWNLOADS_SAVED_MESSAGE = "The File Saved In Your Downloads";
 const DOWNLOADS_SAVED_MULTI_MESSAGE = "The Files Saved In Your Downloads";
 
 async function saveInboxFileToDownloads(filename) {
-  const response = await fetch(`/download/${encodeURIComponent(filename)}`);
-  if (!response.ok) {
-    throw new Error(`Failed to save ${filename}`);
+  const response = await fetch(
+    `/api/save-to-downloads/${encodeURIComponent(filename)}`,
+    { method: "POST" },
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || `Failed to save ${filename}`);
   }
-
-  const blob = await response.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = blobUrl;
-  anchor.download = filename;
-  anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 }
 
 function normalizePercent(value) {
@@ -1447,16 +1439,11 @@ function configureCopyButton() {
   }
 }
 
-function appUrl(ip, port, protocol = state.appProtocol) {
-  return `${protocol}://${ip}:${port}`;
-}
-
 async function bootstrap() {
   const data = await fetchJSON("/api/local-info");
   state.localAppPort = data.app_port;
   state.localTcpPort = data.tcp_port;
-  state.appProtocol = data.protocol || state.appProtocol;
-  const hostUrl = appUrl(data.ip, data.app_port);
+  const hostUrl = `http://${data.ip}:${data.app_port}`;
   byId("localUrl").textContent = hostUrl;
 
   const localAppPortEl = byId("localAppPort");
@@ -1472,8 +1459,8 @@ async function bootstrap() {
     const urlItem = document.createElement("div");
     urlItem.className = "url-item";
     urlItem.innerHTML = `
-      <code>${appUrl(data.ip, data.app_port)}</code>
-      <button class="copy-btn" title="Copy URL" onclick="copyToClipboard('${appUrl(data.ip, data.app_port)}')">📋</button>
+      <code>http://${data.ip}:${data.app_port}</code>
+      <button class="copy-btn" title="Copy URL" onclick="copyToClipboard('http://${data.ip}:${data.app_port}')">📋</button>
     `;
     urlListDiv.appendChild(urlItem);
   }
@@ -1551,7 +1538,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   let allIps = [];
   let appPort = 5000;
-  let appProtocol = state.appProtocol;
 
   // Fetch all IPs for the Show All IPs box
   const loadIpsData = async () => {
@@ -1560,7 +1546,6 @@ window.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
       allIps = data.all_ips || [];
       appPort = data.app_port;
-      appProtocol = data.protocol || appProtocol;
     } catch (err) {
       console.error("Failed to load IPs data:", err);
       allIps = [];
@@ -1598,7 +1583,7 @@ window.addEventListener("DOMContentLoaded", () => {
           allIpsBox.innerHTML = filteredIps
             .map(
               (ip) =>
-                `<div style="margin-bottom:4px;"><code>${appUrl(ip, appPort, appProtocol)}</code> <button class='copy-btn' onclick='copyToClipboard("${appUrl(ip, appPort, appProtocol)}")'>📋</button></div>`
+                `<div style="margin-bottom:4px;"><code>http://${ip}:${appPort}</code> <button class='copy-btn' onclick='copyToClipboard("http://${ip}:${appPort}")'>📋</button></div>`
             )
             .join("");
         }

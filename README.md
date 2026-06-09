@@ -1,6 +1,6 @@
-# LocalShare P2P (No Central Server)
+# FlashDrop 
 
-LocalShare P2P is a direct IP-to-IP file sharing prototype inspired by SHAREit, built with Flask + Python TCP sockets + browser UI.
+FlashDrop  is a direct IP-to-IP file sharing prototype inspired by SHAREit, built with Flask + Python TCP sockets + browser UI.
 
 ## How this maps to your phases
 
@@ -11,7 +11,7 @@ LocalShare P2P is a direct IP-to-IP file sharing prototype inspired by SHAREit, 
 5. **Phase 5 (Connection UX)**: Manual IP connect.
 6. **Phase 6 (Progress/speed/ETA)**: Frontend polls transfer status every second.
 7. **Phase 7 (Multi-file, drag-drop, queue style outbox)**: Multi-select + drag-drop uploads + select files for send.
-8. **Phase 8 (Security/cleanup)**: Optional PIN, allow/deny unknown peers, auto-delete sender outbox after successful send.
+8. **Phase 8 (Security/cleanup)**: Allow/Deny unknown peers, auto-delete sender outbox after successful send.
 
 ## Project structure
 

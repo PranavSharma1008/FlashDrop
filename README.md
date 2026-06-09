@@ -8,7 +8,7 @@ LocalShare P2P is a direct IP-to-IP file sharing prototype inspired by SHAREit, 
 2. **Phase 2 (HTTP upload/download)**: Browser uploads files to `/api/upload`; downloads via `/download/<filename>`.
 3. **Phase 3 (Socket transfer)**: Sender connects directly to receiver `TCP 9009` and streams binary chunks.
 4. **Phase 4 (Chunk transfer)**: 1 MB chunk framing with `.part` file safety and final atomic rename.
-5. **Phase 5 (Connection UX)**: Manual IP connect + QR generation + QR scan auto-fill.
+5. **Phase 5 (Connection UX)**: Manual IP connect.
 6. **Phase 6 (Progress/speed/ETA)**: Frontend polls transfer status every second.
 7. **Phase 7 (Multi-file, drag-drop, queue style outbox)**: Multi-select + drag-drop uploads + select files for send.
 8. **Phase 8 (Security/cleanup)**: Optional PIN, allow/deny unknown peers, auto-delete sender outbox after successful send.
@@ -70,7 +70,6 @@ If you can't connect to a peer after entering the correct IP:
 
 ## Notes
 
-- For iOS camera QR scanning, allow camera permission in browser.
 - For best speed, keep both devices on same fast WiFi/hotspot.
 - This is a prototype; you can later add TLS and stronger auth.
 # FlashDrop
